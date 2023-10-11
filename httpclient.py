@@ -40,37 +40,21 @@ class HTTPResponse(object):
 
 
 class HTTPClient(object):
-
-    def parse_json_string(self, json_string):
-        json_dictionary = json.loads(json_string.replace("\'", "\"").replace("\\","\\\\"))
-        json_to_return = "{"
-        print(json_dictionary)
-        for entry in json_dictionary:
-            data = str(json_dictionary[entry])
-            key = str(entry)
-            json_to_return += f"\"{key}\":\"{data}\", "
-        json_to_return = json_to_return[:-2]
-        json_to_return += "}"
-        return json_to_return
-
-    def get_content_type(self, content):
-        foo = str(content)
-        foo = foo.replace("'",'"')
-        print(f"Foo: {foo}")
-        if json.loads(foo):
-            print(json.loads(foo))
-            return "application/json"
-        else:
-            split = str(content).split("\n")
-            if len(split) == 1:
-                return "application/x-www-form-urlencoded"
-            else:
-                return "multipart/form-data"
-
     # def get_host_port(self,url):
 
+    def parse_json_to_url_encoded(self,json_string):
+        json_dictionary = json.loads(json_string)
+        final_string = ""
+        for key in json_dictionary:
+            final_string += f"{key}={json_dictionary[key]}&"
+        return final_string[:-1]
+    
     def connect(self, host, port):
+        if not port:
+            port = 80
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print(f"Connecting to {host} port {port}")
+
         self.socket.connect((host, port))
         return None
 
@@ -137,18 +121,20 @@ class HTTPClient(object):
     # read everything from the socket
     def recvall(self, sock):
         buffer = bytearray()
+        #self.socket.setblocking(False)
         done = False
         while not done:
             part = sock.recv(1024)
-            if (part):
+            if len(part) == 0:
+                done = True
+            elif part:
                 buffer.extend(part)
             else:
-                done = not part
+                done = True
         return buffer.decode('utf-8')
 
     def GET(self, url, args=None):
         url_split = urllib.parse.urlparse(url)
-        print(f"Connecting to {url_split.hostname} {url_split.port}")
         self.connect(url_split.hostname, url_split.port)
         code = 500
         headers = []
@@ -157,11 +143,17 @@ class HTTPClient(object):
         # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         # sock.connect((url_split.scheme +url_split.hostname,url_split.port))
         print(url)
+        
+        get_what = url_split.path
+        
+        if not get_what:
+            get_what = "/"
+            
 
-        request = f"GET {url_split.path} HTTP/1.1\r\nHost: {url_split.hostname}\r\n\r\n"
+        request = f"GET {get_what} HTTP/1.1\r\nHost: {url_split.hostname}\r\nAccept: */*\r\n\r\n"
         print(f'Sent following message: {request}')
 
-        self.socket.sendall(request.encode('utf-8'))
+        self.sendall(request)
 
         response = self.recvall(self.socket)
         print("Exited.")
@@ -187,20 +179,18 @@ class HTTPClient(object):
         url_split = urllib.parse.urlparse(url)
         self.connect(url_split.hostname, url_split.port)
 
-        content_to_send = {"content-type": "", "content-length": "0",
-                           "content": ""}
+        content_to_send = {"content-type": "", "content-length": "0", "content": ""}
 
-        if_accept = ""
+        content = str(args)
 
         if args:
-            determined_content_type = self.get_content_type(args)
-            content_to_send["content-type"] = determined_content_type
-            content_to_send["content-length"] = len(str(args))
-            if not determined_content_type == "application/json":
-                content_to_send["content"] = str(args)
-            else:
-                content_to_send["content"] = self.parse_json_string(str(args))
-
+            if json.loads(str(args).replace("\'","\"")):
+                content = self.parse_json_to_url_encoded(str(args).replace("\'","\""))
+                
+            content_to_send["content-type"] = "application/x-www-form-urlencoded"
+            content_to_send["content-length"] = len(content)
+            content_to_send["content"] = content
+           
         type = content_to_send["content-type"]
         length = content_to_send["content-length"]
         content = content_to_send["content"]
