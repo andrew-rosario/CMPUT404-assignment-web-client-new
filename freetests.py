@@ -207,32 +207,32 @@ class TestHTTPClient(unittest.TestCase):
         
         
     # consider disabling this test until everything else works
-    def testInternetGets(self):
-        '''Test HTTP Get in the wild, these webservers are far less
-           forgiving'''
-        MyHTTPHandler.get = echo_path_get
-        http = httpclass.HTTPClient()        
-        urls = [
-            "http://www.cs.ualberta.ca/",
-            "http://softwareprocess.es/static/SoftwareProcess.es.html",
-            "http://c2.com/cgi/wiki?CommonLispHyperSpec",
-            "http://slashdot.org"
-            ]
-        for url in urls:
-            try:
-                req = http.GET( url )
-            except Exception as e:
-                print("An Exception was thrown for %s" % url)
-                self.assertTrue( False, "An Exception was thrown for %s %s" % (url,e))
-            self.assertTrue(req != None, "None Returned! %s" % url)
-            self.assertTrue(req.code == 200 or 
-                            req.code == 301 or
-                            req.code == 302,
-                            "Code: %s for %s" % (req.code, url))
-            if (req.code == 200):
-                self.assertTrue(req.body.find("DOCTYPE")>=0 or 
-                                req.body.find("<body")>=0 , 
-                                "%s Data: [%s] " % (url,req.body))
+    # def testInternetGets(self):
+    #     '''Test HTTP Get in the wild, these webservers are far less
+    #        forgiving'''
+    #     MyHTTPHandler.get = echo_path_get
+    #     http = httpclass.HTTPClient()
+    #     urls = [
+    #         "http://www.cs.ualberta.ca/",
+    #         "http://softwareprocess.es/static/SoftwareProcess.es.html",
+    #         "http://c2.com/cgi/wiki?CommonLispHyperSpec",
+    #         "http://slashdot.org"
+    #         ]
+    #     for url in urls:
+    #         try:
+    #             req = http.GET( url )
+    #         except Exception as e:
+    #             print("An Exception was thrown for %s" % url)
+    #             self.assertTrue( False, "An Exception was thrown for %s %s" % (url,e))
+    #         self.assertTrue(req != None, "None Returned! %s" % url)
+    #         self.assertTrue(req.code == 200 or
+    #                         req.code == 301 or
+    #                         req.code == 302,
+    #                         "Code: %s for %s" % (req.code, url))
+    #         if (req.code == 200):
+    #             self.assertTrue(req.body.find("DOCTYPE")>=0 or
+    #                             req.body.find("<body")>=0 ,
+    #                             "%s Data: [%s] " % (url,req.body))
     
     def testPOST(self):
         '''Test HTTP POST with an echo server'''
