@@ -15,6 +15,8 @@ Make a simple web-client like curl or wget
 Contributors / Licensing
 ========================
 
+No external code is used in the completion of this assignment.
+
 Appended code is licensed under the GNU General Public License version 3, with copyright 2023 by Andrew Rosario.
 
 The rest of the code is LICENSE'D under the Apache 2 license by Abram Hindle, 
