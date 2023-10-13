@@ -30,6 +30,10 @@ def help():
 
 
 class HTTPResponse(object):
+    """
+    A HTTP response object, for debugging purposes.
+    """
+
     def __init__(self, code=200, headers=None, body=""):
         if headers is None:
             headers = []
@@ -38,49 +42,63 @@ class HTTPResponse(object):
         self.body = body
 
 
-
 class HTTPClient(object):
+    """
+    An HTTP client that can send GET/ POST requests to HTTP servers.
+    """
+
     # def get_host_port(self,url):
 
-    def parse_json_to_url_encoded(self,json_string):
+    def parse_json_to_url_encoded(self, json_string):
+        """
+        Transform a JSON string into application/x-www-urlencoded form.
+        :param json_string: A valid JSON string.
+        :return: A URL encoded form.
+        """
         json_dictionary = json.loads(json_string)
         final_string = ""
         for key in json_dictionary:
             final_string += f"{key}={json_dictionary[key]}&"
         return final_string[:-1]
-    
+
     def connect(self, host, port):
+        """
+        Connect to the specified host and port.
+        :param host: The host to connect, either an IP address or the URL.
+        :param port: The port to connect out of.
+        :return: None.
+        """
         if not port:
             port = 80
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print(f"Connecting to {host} port {port}")
 
         self.socket.connect((host, port))
-        return None
 
     def get_code(self, data):
         """
         Get the HTTP response code from the HTTP response.
-        :param data:
-        :return:
+        :param data: The HTTP response.
+        :return: A string containing the HTTP response code
         """
         first_line = data.split("\r\n")[0]
 
         try:
-            test = int(first_line.split(" ")[1])
+            int(first_line.split(" ")[1])
         except ValueError:
             print("This is not a number.")
+            return "500"
 
         return int(first_line.split(" ")[1])
 
     def get_headers(self, data):
         """
-        Get the headers from a HTTP response.
-        :param data: A HTTP-compliant response.
+        Get the headers from an HTTP response.
+        :param data: An HTTP-compliant response.
         :return: a list of strings containing the headers
         """
         headers = []
-        traverse = data.split("/r/n")[1:]
+        traverse = data.split("/r/n")[1:]  # omit the first line that denotes the code and response description.
         for line in traverse:
             header_split = line.split(": ")
             header_split[1] = header_split[1].rstrip()
@@ -92,14 +110,14 @@ class HTTPClient(object):
     def get_body(self, data):
         """
         Get the body from a= HTTP response.
-        :param data: A HTTP-compliant response.
+        :param data: An HTTP-compliant response.
         :return: the body of the HTTP response.
         """
         lines = data.split("\r\n")
-        print(lines)
         index_start = 0
 
         found = False
+        # find the blank line which denotes the content body.
         for line in lines:
             if line != "":
                 index_start += 1
@@ -112,43 +130,55 @@ class HTTPClient(object):
             return ''.join(lines[index_start:])
 
     def sendall(self, data):
+        """
+        Send the data to the server.
+        :param data: A string containing the data to send
+        :return: None
+        """
         self.socket.sendall(data.encode('utf-8'))
 
     def close(self):
+        """
+        Close the socket, if open.
+        :return: None.
+        """
         if self.socket:
             self.socket.close()
 
     # read everything from the socket
     def recvall(self, sock):
+        """
+        Receive all bytes from a socket, if any.
+        :param sock: An open socket.
+        :return: The received data.
+        """
         buffer = bytearray()
-        #self.socket.setblocking(False)
         done = False
         while not done:
             part = sock.recv(1024)
-            if len(part) == 0:
-                done = True
-            elif part:
+            if part:
                 buffer.extend(part)
             else:
                 done = True
         return buffer.decode('utf-8')
 
     def GET(self, url, args=None):
+        """
+        Send a GET request to the server.
+        :param url: A URL to send the GET request to.
+        :param args: Not used.
+        :return: An HTTPResponse object containing the code, header, and body of the response.
+        """
         url_split = urllib.parse.urlparse(url)
         self.connect(url_split.hostname, url_split.port)
         code = 500
         headers = []
         body = ""
-        # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # sock.connect((url_split.scheme +url_split.hostname,url_split.port))
-        print(url)
-        
+
         get_what = url_split.path
-        
+
         if not get_what:
             get_what = "/"
-            
 
         request = f"GET {get_what} HTTP/1.1\r\nHost: {url_split.hostname}\r\nAccept: */*\r\n\r\n"
         print(f'Sent following message: {request}')
@@ -165,41 +195,33 @@ class HTTPClient(object):
             body = self.get_body(response)
         else:
             print("Message has not been received. Perhaps the connection was lost?")
-            return None
         return HTTPResponse(code, headers, body)
 
     def POST(self, url, args=None):
         """
-        Post data to the specified URL.
+        Send a POST request to the specified URL.
         :param url: The URL to post to.
         :param args: The data to be posted.
-        :return: A HTTPResponse object.
+        :return: A HTTPResponse object containing the code, header, and body of the response.
         """
 
         url_split = urllib.parse.urlparse(url)
         self.connect(url_split.hostname, url_split.port)
 
-        content_to_send = {"content-type": "", "content-length": "0", "content": ""}
-
         content = str(args)
+        request = (f"POST {url_split.path} HTTP/1.1\r\n"
+                   f"Host: {url_split.hostname}\r\n")
 
         if args:
-            if json.loads(str(args).replace("\'","\"")):
-                content = self.parse_json_to_url_encoded(str(args).replace("\'","\""))
-                
-            content_to_send["content-type"] = "application/x-www-form-urlencoded"
-            content_to_send["content-length"] = len(content)
-            content_to_send["content"] = content
-           
-        type = content_to_send["content-type"]
-        length = content_to_send["content-length"]
-        content = content_to_send["content"]
-        request = (f"POST {url_split.path} HTTP/1.1\r\n"
-                   f"Host: {url_split.hostname}\r\n"
-                   f"Content-Type: {type}\r\n"
-                   f"Content-Length: {length}\r\n"
-                   f"\r\n"
-                   f"{content}\r\n")
+            if json.loads(str(args).replace("\'", "\"")):
+                content = self.parse_json_to_url_encoded(str(args).replace("\'", "\""))
+
+            content_type = "application/x-www-form-urlencoded"
+            length = len(content)
+            request += f"Content-Type: {content_type}\r\nContent-Length: {length}\r\n\r\n{content}\r\n"
+        else:
+            request += "Content-Length: 0\r\n\r\n"
+
         print(f"Request sent: {request}")
         self.sendall(request)
 

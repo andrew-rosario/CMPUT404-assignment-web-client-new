@@ -1,7 +1,12 @@
 CMPUT404-assignment-web-client
 ==============================
 
-CMPUT404-assignment-web-client
+#### Running Instructions
+Use the command specified in the requirements.
+
+Or simply clone this repo and run ```python3 freetests.py``` in your terminal.
+
+-------
 
 See requirements.org (plain-text) for a description of the project.
 
